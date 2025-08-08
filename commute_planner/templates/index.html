@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Melbourne Commute Planner - Real-time Route Optimization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            max-width: 1400px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            gap: 2rem;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 380px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-wrapper .icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 1.2rem;
+        }
+
+        .preferences {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .preferences h3 {
+            color: #333;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .checkbox-wrapper:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 0.75rem;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checkbox-wrapper label {
+            margin: 0;
+            font-weight: 500;
+            color: #555;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .map-container {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            position: relative;
+            min-height: 600px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+        }
+
+        .route-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            min-width: 250px;
+            z-index: 100;
+            display: none;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .route-info.active {
+            display: block;
+        }
+
+        .route-info h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .route-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .route-stat:last-child {
+            border-bottom: none;
+        }
+
+        .route-stat .label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .route-stat .value {
+            color: #333;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .traffic-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .traffic-light { background: #4caf50; }
+        .traffic-moderate { background: #ff9800; }
+        .traffic-heavy { background: #f44336; }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        @media (max-width: 968px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .control-panel {
+                width: 100%;
+            }
+
+            .map-container {
+                min-height: 500px;
+            }
+
+            .route-info {
+                right: 10px;
+                top: 10px;
+                min-width: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .control-panel {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚗 Melbourne Commute Planner</h1>
+        <div class="subtitle">Real-time traffic-aware route optimization for your daily commute</div>
+    </div>
+
+    <div class="container">
+        <div class="control-panel">
+            <form id="routeForm">
+                <div class="form-group">
+                    <label for="origin">Starting Point</label>
+                    <div class="input-wrapper">
+                        <span class="icon">📍</span>
+                        <input type="text" id="origin" name="origin" placeholder="Enter start address or landmark" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="destination">Destination</label>
+                    <div class="input-wrapper">
+                        <span class="icon">🎯</span>
+                        <input type="text" id="destination" name="destination" placeholder="Enter destination address" required>
+                    </div>
+                </div>
+
+                <div class="preferences">
+                    <h3>Route Preferences</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="avoidTolls" name="avoidTolls">
+                            <label for="avoidTolls">Avoid Toll Roads</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="avoidHighways" name="avoidHighways">
+                            <label for="avoidHighways">Avoid Highways</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="avoidFerries" name="avoidFerries">
+                            <label for="avoidFerries">Avoid Ferries</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    Calculate Best Route
+                </button>
+            </form>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Calculating optimal route...</p>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="route-info" id="routeInfo">
+                <h3>📊 Route Details</h3>
+                <div class="route-stat">
+                    <span class="label">Duration (with traffic)</span>
+                    <span class="value" id="duration">--</span>
+                </div>
+                <div class="route-stat">
+                    <span class="label">Distance</span>
+                    <span class="value" id="distance">--</span>
+                </div>
+                <div class="route-stat">
+                    <span class="label">Traffic Status</span>
+                    <span class="value" id="traffic">
+                        <span id="trafficText">--</span>
+                        <span class="traffic-indicator" id="trafficIndicator"></span>
+                    </span>
+                </div>
+                <div class="route-stat">
+                    <span class="label">Route Via</span>
+                    <span class="value" id="via">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize variables
+        let map;
+        let directionsService;
+        let directionsRenderer;
+        let autocompleteOrigin;
+        let autocompleteDestination;
+        let markers = [];
+
+        // Initialize Google Maps
+        function initMap() {
+            // Melbourne center coordinates
+            const melbourne = { lat: -37.8136, lng: 144.9631 };
+
+            // Create map
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: melbourne,
+                zoom: 12,
+                styles: [
+                    {
+                        "featureType": "water",
+                        "elementType": "geometry",
+                        "stylers": [{"color": "#e9e9e9"}, {"lightness": 17}]
+                    },
+                    {
+                        "featureType": "landscape",
+                        "elementType": "geometry",
+                        "stylers": [{"color": "#f5f5f5"}, {"lightness": 20}]
+                    },
+                    {
+                        "featureType": "road.highway",
+                        "elementType": "geometry.fill",
+                        "stylers": [{"color": "#ffffff"}, {"lightness": 17}]
+                    },
+                    {
+                        "featureType": "road.highway",
+                        "elementType": "geometry.stroke",
+                        "stylers": [{"color": "#ffffff"}, {"lightness": 29}, {"weight": 0.2}]
+                    }
+                ],
+                mapTypeControl: false,
+                fullscreenControl: false,
+                streetViewControl: false
+            });
+
+            // Initialize directions service and renderer
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map,
+                polylineOptions: {
+                    strokeColor: '#667eea',
+                    strokeWeight: 5,
+                    strokeOpacity: 0.8
+                },
+                suppressMarkers: false
+            });
+
+            // Set up autocomplete for input fields
+            const options = {
+                componentRestrictions: { country: 'au' },
+                bounds: new google.maps.LatLngBounds(
+                    new google.maps.LatLng(-38.5, 144.0),
+                    new google.maps.LatLng(-37.0, 146.0)
+                )
+            };
+
+            autocompleteOrigin = new google.maps.places.Autocomplete(
+                document.getElementById('origin'),
+                options
+            );
+
+            autocompleteDestination = new google.maps.places.Autocomplete(
+                document.getElementById('destination'),
+                options
+            );
+
+            // Add Melbourne suffix if not present
+            autocompleteOrigin.addListener('place_changed', function() {
+                const place = autocompleteOrigin.getPlace();
+                if (place.geometry) {
+                    map.setCenter(place.geometry.location);
+                    map.setZoom(14);
+                }
+            });
+
+            autocompleteDestination.addListener('place_changed', function() {
+                const place = autocompleteDestination.getPlace();
+                if (place.geometry) {
+                    map.setCenter(place.geometry.location);
+                    map.setZoom(14);
+                }
+            });
+        }
+
+        // Calculate and display route
+        function calculateRoute(origin, destination, avoidTolls, avoidHighways, avoidFerries) {
+            // Show loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('errorMessage').classList.remove('active');
+            document.getElementById('routeInfo').classList.remove('active');
+
+            // Clear previous markers
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            // Build avoid array
+            const avoid = [];
+            if (avoidTolls) avoid.push('tolls');
+            if (avoidHighways) avoid.push('highways');
+            if (avoidFerries) avoid.push('ferries');
+
+            // Ensure Melbourne is added to addresses if not present
+            const melbourneOrigin = origin.toLowerCase().includes('melbourne') ? origin : origin + ', Melbourne, VIC, Australia';
+            const melbourneDestination = destination.toLowerCase().includes('melbourne') ? destination : destination + ', Melbourne, VIC, Australia';
+
+            const request = {
+                origin: melbourneOrigin,
+                destination: melbourneDestination,
+                travelMode: google.maps.TravelMode.DRIVING,
+                drivingOptions: {
+                    departureTime: new Date(),
+                    trafficModel: 'bestguess'
+                },
+                avoidTolls: avoidTolls,
+                avoidHighways: avoidHighways,
+                avoidFerries: avoidFerries,
+                unitSystem: google.maps.UnitSystem.METRIC,
+                region: 'AU'
+            };
+
+            directionsService.route(request, function(result, status) {
+                document.getElementById('loading').classList.remove('active');
+
+                if (status === 'OK') {
+                    // Display route on map
+                    directionsRenderer.setDirections(result);
+
+                    const route = result.routes[0];
+                    const leg = route.legs[0];
+
+                    // Update route information
+                    document.getElementById('duration').textContent = leg.duration_in_traffic ?
+                        leg.duration_in_traffic.text : leg.duration.text;
+                    document.getElementById('distance').textContent = leg.distance.text;
+
+                    // Calculate traffic status
+                    let trafficStatus = 'Light';
+                    let trafficClass = 'traffic-light';
+
+                    if (leg.duration_in_traffic && leg.duration) {
+                        const normalTime = leg.duration.value;
+                        const trafficTime = leg.duration_in_traffic.value;
+                        const difference = trafficTime - normalTime;
+                        const percentIncrease = (difference / normalTime) * 100;
+
+                        if (percentIncrease > 30) {
+                            trafficStatus = 'Heavy';
+                            trafficClass = 'traffic-heavy';
+                        } else if (percentIncrease > 10) {
+                            trafficStatus = 'Moderate';
+                            trafficClass = 'traffic-moderate';
+                        }
+                    }
+
+                    document.getElementById('trafficText').textContent = trafficStatus;
+                    const indicator = document.getElementById('trafficIndicator');
+                    indicator.className = 'traffic-indicator ' + trafficClass;
+
+                    // Get main route via
+                    const summary = route.summary || 'Direct Route';
+                    document.getElementById('via').textContent = summary;
+
+                    // Show route info panel
+                    document.getElementById('routeInfo').classList.add('active');
+
+                    // Adjust map bounds to show entire route
+                    const bounds = new google.maps.LatLngBounds();
+                    route.overview_path.forEach(point => bounds.extend(point));
+                    map.fitBounds(bounds);
+
+                } else {
+                    // Show error message
+                    let errorMsg = 'Unable to calculate route. ';
+
+                    switch(status) {
+                        case 'ZERO_RESULTS':
+                            errorMsg += 'No route found between these locations.';
+                            break;
+                        case 'NOT_FOUND':
+                            errorMsg += 'One or both locations could not be found.';
+                            break;
+                        case 'REQUEST_DENIED':
+                            errorMsg += 'Request denied. Please check API configuration.';
+                            break;
+                        case 'OVER_QUERY_LIMIT':
+                            errorMsg += 'Query limit exceeded. Please try again later.';
+                            break;
+                        default:
+                            errorMsg += 'Please check your addresses and try again.';
+                    }
+
+                    document.getElementById('errorMessage').textContent = errorMsg;
+                    document.getElementById('errorMessage').classList.add('active');
+                }
+            });
+        }
+
+        // Form submission handler
+        document.getElementById('routeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const origin = document.getElementById('origin').value;
+            const destination = document.getElementById('destination').value;
+            const avoidTolls = document.getElementById('avoidTolls').checked;
+            const avoidHighways = document.getElementById('avoidHighways').checked;
+            const avoidFerries = document.getElementById('avoidFerries').checked;
+
+            if (origin && destination) {
+                calculateRoute(origin, destination, avoidTolls, avoidHighways, avoidFerries);
+            }
+        });
+
+        // Add some example quick routes for Melbourne
+        window.addEventListener('load', function() {
+            // You can add default values or quick route buttons here if needed
+            // Example: Set default values for testing
+            // document.getElementById('origin').value = 'Federation Square, Melbourne';
+            // document.getElementById('destination').value = 'Melbourne Airport';
+        });
+    </script>
+
+    <!-- Google Maps JavaScript API -->
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBZayUuc8L0VralIrPADzvVczkeD035OOI&libraries=places&callback=initMap">
+    </script>
+</body>
+</html>
