@@ -48,7 +48,14 @@
             flex: 1;
             max-width: 1400px;
             width: 100%;
-            margin: 2rem auto;
+            margin: 1rem auto;
+            padding: 0 1rem;
+            gap: 1rem;
+        }
+
+        .inner-container {
+            display: flex;
+            flex-direction: column;
             padding: 0 2rem;
             gap: 2rem;
         }
@@ -394,8 +401,8 @@
 </div>
 
 <div class="container">
-    <div class="control-panel">
-        <form id="routeForm">
+    <div class="inner-container">
+        <div class="control-panel">
             <div class="form-group">
                 <label for="placeSearch">Search a place</label>
                 <div class="input-wrapper">
@@ -412,51 +419,57 @@
                     </div>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="origin">Starting Point</label>
-                <div class="input-wrapper">
-                    <span class="icon">📍</span>
-                    <input type="text" id="origin" name="origin" placeholder="Enter start address or landmark" required>
-                </div>
-            </div>
+        </div>
 
-            <div class="form-group">
-                <label for="destination">Destination</label>
-                <div class="input-wrapper">
-                    <span class="icon">🎯</span>
-                    <input type="text" id="destination" name="destination" placeholder="Enter destination address"
-                           required>
-                </div>
-            </div>
-
-            <div class="preferences">
-                <h3>Route Preferences</h3>
-                <div class="checkbox-group">
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="avoidTolls" name="avoidTolls">
-                        <label for="avoidTolls">Avoid Toll Roads</label>
-                    </div>
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="avoidHighways" name="avoidHighways">
-                        <label for="avoidHighways">Avoid Highways</label>
-                    </div>
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="avoidFerries" name="avoidFerries">
-                        <label for="avoidFerries">Avoid Ferries</label>
+        <div class="control-panel">
+            <form id="routeForm">
+                <div class="form-group">
+                    <label for="origin">Starting Point</label>
+                    <div class="input-wrapper">
+                        <span class="icon">📍</span>
+                        <input type="text" id="origin" name="origin" placeholder="Enter start address or landmark"
+                               required>
                     </div>
                 </div>
+
+                <div class="form-group">
+                    <label for="destination">Destination</label>
+                    <div class="input-wrapper">
+                        <span class="icon">🎯</span>
+                        <input type="text" id="destination" name="destination" placeholder="Enter destination address"
+                               required>
+                    </div>
+                </div>
+
+                <div class="preferences">
+                    <h3>Route Preferences</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="avoidTolls" name="avoidTolls">
+                            <label for="avoidTolls">Avoid Toll Roads</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="avoidHighways" name="avoidHighways">
+                            <label for="avoidHighways">Avoid Highways</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="avoidFerries" name="avoidFerries">
+                            <label for="avoidFerries">Avoid Ferries</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    Calculate Best Route
+                </button>
+            </form>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Calculating optimal route...</p>
             </div>
-
-            <button type="submit" class="btn-primary">
-                Calculate Best Route
-            </button>
-        </form>
-
-        <div class="error-message" id="errorMessage"></div>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Calculating optimal route...</p>
         </div>
     </div>
 
@@ -499,6 +512,13 @@
     let placeAutocomplete;
     let placeMarker;
 
+    let parkingMarkers = [];
+
+    function clearParkingMarkers() {
+        for (const m of parkingMarkers) m.setMap(null);
+        parkingMarkers = [];
+    }
+
     // Helper: Show place info in panel
     function showPlaceInfo({name = 'N/A', lat, lng}) {
         const nameEl = document.getElementById('placeName');
@@ -520,6 +540,37 @@
             position,
             title
         });
+    }
+
+    async function fetchAndRenderAvailableParking(lat, lng) {
+        try {
+            const resp = await fetch('/available_parking', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lat, lng})
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+
+            // Clean old parking markers
+            clearParkingMarkers();
+
+            // data.coords which is [{lon, lat}, ...]
+            (data.coords || []).forEach((c) => {
+                const m = new google.maps.Marker({
+                    map,
+                    position: {lat: c.lat, lng: c.lon},
+                    title: 'Available parking',
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 6
+                    }
+                });
+                parkingMarkers.push(m);
+            });
+        } catch (err) {
+            console.error('available_parking failed:', err);
+        }
     }
 
     // Initialize Google Maps
@@ -676,6 +727,7 @@
             document.getElementById('placeName').textContent = place.name || 'N/A';
             document.getElementById('placeCoords').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             document.getElementById('placeResult').style.display = 'block';
+            fetchAndRenderAvailableParking(lat, lng);
         });
 
         // Click the map and maek location
@@ -688,6 +740,7 @@
                 name: 'Custom pin',
                 lat, lng
             });
+            fetchAndRenderAvailableParking(lat, lng);
         });
 
         autocompleteDestination.addListener('place_changed', function () {

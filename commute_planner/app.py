@@ -8,7 +8,12 @@ import os
 import sys
 import webbrowser
 import time
+from datetime import datetime
 from threading import Timer
+
+import requests
+
+from prediction import find_nearby_free_slots_by_location
 
 # Try Flask first, fall back to simple HTTP server if not available
 try:
@@ -91,6 +96,45 @@ if USE_FLASK:
                 'status': 'error',
                 'message': str(e)
             }), 400
+
+
+    @app.route("/available_parking", methods=['POST'])
+    def available_parking():
+        """
+        POST JSON: { "lat": -37.8136, "lng": 144.9631}
+        returns: Array of all parking locations
+        """
+        data = request.get_json(silent=True) or {}
+        try:
+            lat = round(float(data.get("lat")), 4)
+            lng = round(float(data.get("lng")))
+        except (TypeError, ValueError):
+            return jsonify({"error": "lat/lng required as numbers"}), 400
+
+        result = find_nearby_free_slots_by_location(
+            lat,
+            lng,
+            current_time=datetime.now(),
+            top_k=5,
+            radius_m=2000)
+
+        all_coords = []
+        if len(result) >= 1 and result[0] != 0:
+            for kerbside_id in result:
+                real_time_api = f"https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/on-street-parking-bay-sensors/records?where=kerbsideid%3D{kerbside_id}&limit=1"
+                r = requests.get(real_time_api)
+                data = r.json()
+                try:
+                    slot = data["results"][0]
+                    coords = slot["location"]
+                    all_coords.append(coords)
+                except IndexError:
+                    all_coords
+
+        return jsonify({
+            'status': 'success',
+            "coords": all_coords,
+        }), 200
 
 
     @app.route('/health')
