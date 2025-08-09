@@ -592,6 +592,7 @@
                         lat: userPos.lat,
                         lng: userPos.lng
                     });
+                    fetchAndRenderAvailableParking(userPos.lat, userPos.lng);
                 },
                 (err) => {
                     console.warn('Geolocation failed or denied:', err.message);
@@ -605,6 +606,7 @@
                         lat: melbourne.lat,
                         lng: melbourne.lng
                     });
+                    fetchAndRenderAvailableParking(melbourne.lat, melbourne.lng);
                 },
                 {enableHighAccuracy: true, timeout: 10000, maximumAge: 0}
             );
@@ -616,6 +618,7 @@
                 lat: melbourne.lat,
                 lng: melbourne.lng
             });
+            fetchAndRenderAvailableParking(melbourne.lat, melbourne.lng)
         }
 
         // Create map
