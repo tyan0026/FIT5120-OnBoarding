@@ -6,4 +6,3 @@ torch
 joblib
 pandas
 numpy
-sklearn
