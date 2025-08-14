@@ -27,7 +27,7 @@ except ImportError:
     import mimetypes
 
 # Configuration
-PORT = 5000
+PORT = 80
 HOST = 'localhost'
 # Api key
 GOOGLE_API_KEY = 'AIzaSyBE2C9ZB9XCENHh8ujnbWxcxIBNzd5Zh84'
