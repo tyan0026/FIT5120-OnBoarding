@@ -6,7 +6,4 @@ torch
 joblib
 pandas
 numpy
-<<<<<<< HEAD
 scikit-learn
-=======
->>>>>>> 99aa590b15734931a50e902ea28c691bfdbbc95f
