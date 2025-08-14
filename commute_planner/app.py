@@ -30,7 +30,7 @@ except ImportError:
 PORT = 80
 HOST = 'localhost'
 # Api key
-GOOGLE_API_KEY = 'AIzaSyBE2C9ZB9XCENHh8ujnbWxcxIBNzd5Zh84'
+GOOGLE_API_KEY = 'AIzaSyBBImNRxXijuCPnHAlZTnDaLr22Gyl3kqQ'
 
 
 def open_browser():
